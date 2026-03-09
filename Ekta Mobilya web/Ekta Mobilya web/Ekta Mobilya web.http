@@ -1,0 +1,6 @@
+@Ekta_Mobilya_web_HostAddress = http://localhost:5023
+
+GET {{Ekta_Mobilya_web_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
