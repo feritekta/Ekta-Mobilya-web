@@ -1,0 +1,446 @@
+/* ==========================================
+   1. GENEL SAYFA YAPISI VE SIFIRLAMA
+   ========================================== */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f4f1ee; /* Hafif krem mobilya tonu */
+  color: #5d4037; /* EKTA Koyu Kahve */
+  overflow-x: hidden; /* Yatay kaymayı engeller */
+}
+
+/* ==========================================
+   2. NAVBAR (ÜST MENÜ) TASARIMI
+   ========================================== */
+.navbar {
+  background-color: #5d4037;
+  color: #eec15b;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 40px;
+  height: 80px;
+  position: sticky; /* Sayfayı kaydırınca üstte sabit kalır */
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+/* Sol Alan: Metin Logo (EKTA MOBİLYA yazısı) */
+.nav-left {
+  flex: 1;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.logo-text {
+  font-size: 22px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+/* Orta Alan: Görsel Logo (KESİN MERKEZLEME) */
+.nav-center {
+  position: absolute; /* Navbar akışından çıkarır */
+  left: 50%;
+  transform: translateX(-50%); /* Tam matematiksel merkezi bulur */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1005;
+}
+
+.main-logo-img {
+  height: 60px;
+  transition: transform 0.3s ease;
+  cursor: pointer;
+}
+
+.main-logo-img:hover {
+  transform: scale(1.1);
+}
+
+/* Sağ Alan: Linkler ve Hamburger İkonu */
+.nav-right {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.nav-links {
+  display: flex;
+  list-style: none;
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  align-items: center;
+}
+
+.nav-links li {
+  cursor: pointer;
+  font-weight: 500;
+  transition: 0.3s;
+}
+
+.nav-links li:hover {
+  color: #fff;
+}
+
+/* Hesap Butonu Çerçevesi */
+.account-btn {
+  border: 1.5px solid #eec15b;
+  padding: 6px 18px;
+  border-radius: 20px;
+}
+
+/* Hamburger İkonu (Masaüstünde Gizli) */
+.menu-icon {
+  display: none;
+  font-size: 30px;
+  color: #eec15b;
+  cursor: pointer;
+  z-index: 1010;
+  margin-left: 15px;
+}
+
+/* ==========================================
+   3. SLIDER (HAREKETLİ BANNER) ALANI
+   ========================================== */
+.slider-container {
+  position: relative;
+  width: 100%;
+  height: 500px;
+  overflow: hidden;
+  background-color: #f4f1ee;
+}
+
+.slide {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slide.active {
+  opacity: 1;
+}
+
+.slider-overlay {
+  background: rgba(93, 64, 55, 0.4);
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  text-align: center;
+}
+
+.slider-text {
+  font-size: 48px;
+  color: #eec15b !important;
+  text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+  margin-bottom: 10px;
+}
+
+.slider-subtext {
+  font-size: 18px;
+  margin-bottom: 25px;
+}
+.slider-btn {
+  width: auto; 
+  min-width: 160px; 
+  max-width: fit-content; /* İçeriğe göre sığdır */
+  padding: 12px 30px; 
+  border: 2px solid #eec15b !important;
+  display: inline-block; 
+}
+
+.slider-dots {
+  position: absolute;
+  bottom: 20px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.dot.active {
+  background: #eec15b;
+  transform: scale(1.3);
+}
+
+/* ==========================================
+   4. ÜRÜN KARTLARI (GRID) TASARIMI
+   ========================================== */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 30px;
+  padding: 40px 50px;
+}
+
+.product-card {
+  background-color: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #5d4037; 
+  box-shadow: 0 4px 12px rgba(93, 64, 55, 0.15); 
+  transition: all 0.3s ease-in-out;
+}
+
+.product-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgba(93, 64, 55, 0.25);
+  border: 1px solid #eec15b; 
+}
+
+.product-card img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+}
+
+/* Favori İkonu Dairesi */
+.favorite-icon-wrapper {
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 1px solid #5d4037;
+  transition: 0.3s;
+}
+
+.favorite-icon-wrapper.active {
+  border-color: #eec15b;
+}
+
+.favorite-icon-wrapper.active .favorite-icon path {
+  fill: #5d4037 !important;
+  stroke: #5d4037 !important;
+}
+
+/* ==========================================
+   5. ÜRÜN DETAY SAYFASI (MODAL)
+   ========================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex; justify-content: center; align-items: center;
+  z-index: 2000;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 40px;
+  border-radius: 15px;
+  width: 90%;
+  max-width: 1200px;
+  height: 85vh;
+  position: relative;
+  overflow-y: auto;
+  animation: modalAnim 0.3s ease-out;
+}
+
+.detail-container {
+  display: flex;
+  gap: 40px;
+}
+
+/* ==========================================
+   6. AUTH (GİRİŞ/KAYIT) KARTLARI
+   ========================================== */
+.auth-container {
+  display: flex; justify-content: center; align-items: center;
+  height: calc(100vh - 80px);
+}
+
+.auth-card {
+  background: white;
+  padding: 40px;
+  border-radius: 15px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  width: 350px;
+  border-top: 5px solid #5d4037;
+  text-align: center;
+}
+
+.auth-button {
+  width: 100%;
+  padding: 12px;
+  background-color: #5d4037;
+  color: #eec15b;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* ==========================================
+   7. FOOTER (ALT BİLGİ)
+   ========================================== */
+.ekta-footer {
+  background-color: #5d4037;
+  color: #eec15b;
+  padding: 60px 50px 20px;
+  text-align: left;
+}
+
+/* ==========================================
+   8. MOBİL TASARIM (RESPONSIVE)
+   ========================================== */
+@media (max-width: 768px) {
+  /* Sol metin logoyu gizle (Logo zaten merkezde) */
+  .nav-left {
+    display: none;
+  }
+
+  /* Hamburger ikonu en sağda görünsün */
+  .menu-icon {
+    display: block;
+    order: 2;
+  }
+
+  /* Mobil Menü Paneli */
+  .nav-links {
+    position: fixed;
+    top: -100vh; /* Kapalıyken yukarıda gizli */
+    left: 0;
+    width: 100%;
+    background-color: #5d4037;
+    flex-direction: column;
+    padding: 100px 0 30px 0;
+    transition: 0.5s ease-in-out;
+    z-index: 1000;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  }
+
+  .nav-links.active {
+    top: 0; /* Menü açılınca aşağı kaysın */
+  }
+
+  .nav-links li {
+    font-size: 20px;
+    margin: 15px 0;
+  }
+
+  /* Grid yapılarını teke düşür */
+  .product-grid {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+
+  .detail-container {
+    flex-direction: column;
+  }
+
+  /* Slider küçültme */
+  .slider-container {
+    height: 350px;
+  }
+
+  .slider-text {
+    font-size: 28px !important;
+  }
+}
+
+
+/* Animasyonlar */
+@keyframes modalAnim {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+
+/* ==========================================
+   9. 3D Bölümü
+   ========================================== */
+.three-d-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 80px 50px;
+  background-color: #fff;
+  flex-wrap: wrap; /* Mobilde alt alta geçer */
+}
+
+.three-d-text {
+  flex: 1;
+  max-width: 400px;
+  text-align: left;
+}
+
+.three-d-text h2 {
+  font-size: 36px;
+  color: #5d4037;
+  margin-bottom: 20px;
+}
+
+.model-wrapper {
+  flex: 1;
+  min-width: 300px;
+  background: radial-gradient(circle, #f4f1ee 0%, #d7ccc8 100%); /* Hafif derinlik efekti */
+  border-radius: 20px;
+} /* Sol taraftaki 'Hemen Deneyimle' butonu */
+.three-d-experience-btn {
+  background-color: #5d4037;
+  color: #eec15b;
+  border: none;
+  padding: 15px 35px;
+  border-radius: 30px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 25px;
+  display: inline-block; /* Görünürlüğü garanti eder */
+  transition: 0.3s;
+}
+
+.three-d-experience-btn:hover {
+  background-color: #eec15b;
+  color: #5d4037;
+}
+
+/* Telefondaki 'Odamda Canlı Gör' Butonu */
+.ar-button {
+  background-color: #eec15b;
+  color: #5d4037;
+  border-radius: 30px;
+  border: none;
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  padding: 12px 25px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  z-index: 100;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
