@@ -15,7 +15,7 @@ function ProductDetail({ product, onClose, onFavorite }) {
           {/* SOL TARAF: Büyük ve Net Ürün Görseli */}
           <div className="detail-image">
             <img
-              src="https://via.placeholder.com/800x600?text=EKTA+Mobilya+Büyük+Görsel"
+              src="/masa-sandalye.jpeg"
               alt={product.name}
             />
           </div>
