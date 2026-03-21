@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Ekta_Mobilya_web.Data;
 using Ekta_Mobilya_web.Models;
+using Microsoft.AspNetCore.Authorization; // [Authorize] için gerekli
+ 
 
 namespace Ekta_Mobilya_web.Controllers
 {
@@ -11,20 +13,63 @@ namespace Ekta_Mobilya_web.Controllers
     public class ProductsController : ControllerBase
     {
         private readonly AppDbContext _context;
-
         // Dependency Injection: Veritabanı bağlantımızı (AppDbContext) bu sınıfa tanıtıyoruz.
         public ProductsController(AppDbContext context)
         {
             _context = context;
         }
 
-        // 1. ADIM: Tüm Ürünleri Getir (GET api/products)
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
+        // ÜRÜN EKLEME (Sadece Adminler Yapabilir)
+        [Authorize(Roles = "Admin")]
+        [HttpPost("add")]
+        public async Task<IActionResult> AddProduct([FromBody] Product product)
         {
-            // Veritabanındaki 'Products' tablosuna gider ve tüm listeyi çeker.
-            return await _context.Products.ToListAsync();
+            if (product == null) return BadRequest();
+
+            _context.Products.Add(product);
+            await _context.SaveChangesAsync();
+            return Ok(product);
         }
+
+        // ÜRÜN GÜNCELLEME (PUT) - Fotoğraf, açıklama vs.
+        [HttpPut("update/{id}")]
+        public async Task<IActionResult> UpdateProduct(int id, [FromBody] Product updatedProduct)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product == null) return NotFound();
+
+            product.Name = updatedProduct.Name;
+            product.Price = updatedProduct.Price;
+            product.Description = updatedProduct.Description;
+            product.ImageUrl = updatedProduct.ImageUrl;
+            product.Category = updatedProduct.Category;
+
+            await _context.SaveChangesAsync();
+            return Ok(product);
+        }
+
+        // ÜRÜN SİLME (DELETE)
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("delete/{id}")]
+        public async Task<IActionResult> DeleteProduct(int id)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product == null) return NotFound();
+
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
+            return Ok();
+        }
+
+        
+
+        //// 1. ADIM: Tüm Ürünleri Getir (GET api/products)
+        //[HttpGet]
+        //public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
+        //{
+        //    // Veritabanındaki 'Products' tablosuna gider ve tüm listeyi çeker.
+        //    return await _context.Products.ToListAsync();
+        //}
 
         // 2. ADIM: Test Verisi Eklemek (POST api/products/seed)
         // Veritabanın şu an boş olduğu için, React'te bir şey görebilmemiz adına geçici bir 'Seed' metodu yazıyoruz.

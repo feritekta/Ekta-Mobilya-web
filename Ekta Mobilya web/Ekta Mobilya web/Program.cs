@@ -1,32 +1,63 @@
-using Microsoft.EntityFrameworkCore;
+ï»¿using Microsoft.EntityFrameworkCore;
 using Ekta_Mobilya_web.Data;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
-// Veritabaný baðlantý servisini (DbContext) uygulamaya tanýtýyoruz.
+
+// --- 1. AYARLAR ---
+// JWT Key (En az 16-32 karakter olmalÄ±, AuthController ile aynÄ± olmalÄ±!)
+var jwtKey = "super_secret_key_1234567890123456";
+
+// --- 2. SERVÄ°SLER ---
+
+// DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
-    // SQL Server kullanacaðýmýzý ve baðlantý adresini (Connection String) 
-    // 'appsettings.json' dosyasýndaki "DefaultConnection" adýndan alacaðýmýzý belirtiyoruz.
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Add services to the container.
-
+// Controllers
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// React (Frontend) uygulamamýzýn API'ye eriþebilmesi için izin veriyoruz.
+// CORS (React baÄŸlantÄ±sÄ± iÃ§in)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReact",
-        builder => builder.AllowAnyOrigin() // Þimdilik her yerden gelen isteðe izin ver (Test aþamasý için).
-                          .AllowAnyMethod() // GET, POST, DELETE hepsine izin ver.
-                          .AllowAnyHeader()); // Tüm baþlýklara izin ver.
+        policy => policy.AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader());
 });
+
+// AUTHENTICATION & JWT (BurasÄ± gÃ¼ncellendi)
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true, // AuthController'da "EktaApp" verdiÄŸin iÃ§in bunu true yapÄ±yoruz
+        ValidateAudience = true, // AuthController'da "EktaApp" verdiÄŸin iÃ§in bunu true yapÄ±yoruz
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = "EktaApp", // AuthController ile birebir aynÄ± olmalÄ±
+        ValidAudience = "EktaApp", // AuthController ile birebir aynÄ± olmalÄ±
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+    };
+});
+
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// --- 3. MIDDLEWARE (ARA YAZILIM) ---
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -35,8 +66,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// CORS mutlaka Auth'dan Ã¶nce gelmeli!
 app.UseCors("AllowReact");
 
+// SIRA Ã‡OK Ã–NEMLÄ°: Ã–nce Authentication, sonra Authorization
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

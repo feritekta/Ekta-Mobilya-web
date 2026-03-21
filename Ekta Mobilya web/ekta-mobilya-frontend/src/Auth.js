@@ -15,7 +15,7 @@ function Auth({ onClose, onLoginSuccess, user, onLogout }) {
                 .then(res => {
                     setMyFavorites(res.data);
                 })
-                .catch(err => console.log("Hata:", err));
+                .catch(err => console.log("Favori çekme hatası:", err));
         }
     }, [user]);
 
@@ -23,7 +23,6 @@ function Auth({ onClose, onLoginSuccess, user, onLogout }) {
     const handleRemoveFavorite = async (productId) => {
         try {
             await axios.delete(`https://localhost:7087/api/products/favorite-remove?userId=${user.id}&productId=${productId}`);
-            // State'i güncelle: Silinen ürünü listeden hemen çıkart
             setMyFavorites(prev => prev.filter(item => item.id !== productId));
         } catch (err) {
             console.error("Favori silinirken hata oluştu:", err);
@@ -39,7 +38,7 @@ function Auth({ onClose, onLoginSuccess, user, onLogout }) {
                     <p style={{ color: '#666' }}>{user.email}</p>
 
                     <div className="profile-sections" style={{ marginTop: '30px' }}>
-                        <div className="profile-section-item" style={{ justifyContent: 'center', marginBottom: '20px' }}>
+                        <div className="profile-section-item" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '20px', gap: '10px' }}>
                             <GrFavorite /> <span>Favorilerim</span>
                         </div>
 
@@ -53,7 +52,7 @@ function Auth({ onClose, onLoginSuccess, user, onLogout }) {
                                 {myFavorites.map((fav) => (
                                     <div key={fav.id} className="product-card is-fav">
                                         <img
-                                            src="https://via.placeholder.com/300x200?text=EKTA+Mobilya"
+                                            src={fav.imageUrl || "https://via.placeholder.com/300x200?text=EKTA+Mobilya"}
                                             alt={fav.name}
                                             style={{ width: '100%', height: '150px', objectFit: 'cover' }}
                                         />
@@ -63,10 +62,9 @@ function Auth({ onClose, onLoginSuccess, user, onLogout }) {
                                                 <span style={{ fontWeight: 'bold', color: '#5d4037', fontSize: '16px' }}>
                                                     {fav.price} TL
                                                 </span>
-
-                                                {/* Favoriden Çıkartma Butonu (Kalp) */}
                                                 <div 
                                                     className="favorite-icon-wrapper active" 
+                                                    style={{ cursor: 'pointer' }}
                                                     onClick={() => handleRemoveFavorite(fav.id)}
                                                 >
                                                     <GrFavorite className="favorite-icon" style={{ fill: '#5d4037', color: '#5d4037' }} />
@@ -81,7 +79,7 @@ function Auth({ onClose, onLoginSuccess, user, onLogout }) {
                         )}
                     </div>
 
-                    <button onClick={() => { onLogout(); onClose(); }} className="logout-btn-profile" style={{ maxWidth: '200px', margin: '30px auto' }}>
+                    <button onClick={() => { onLogout(); onClose(); }} className="logout-btn-profile" style={{ maxWidth: '200px', margin: '30px auto', display: 'block' }}>
                         Güvenli Çıkış Yap
                     </button>
                 </div>
@@ -95,24 +93,50 @@ function Auth({ onClose, onLoginSuccess, user, onLogout }) {
         const endpoint = isLogin ? 'login' : 'register';
         try {
             const response = await axios.post(`https://localhost:7087/api/auth/${endpoint}`, {
-                Username: formData.username,
                 Email: formData.email,
-                PasswordHash: formData.password
+                PasswordHash: formData.password,
+                // Kayıt sırasında username de gönderilmeli
+                Username: isLogin ? undefined : formData.username 
             });
 
             if (isLogin) {
+                // Backend'den gelen yapıyı parçalayalım
+                const { token, user: backendUser } = response.data;
+
+                if (token) {
+                    localStorage.setItem('token', token);
+                    // Bearer token'ı axios default ayarlarına ekleyebilirsin (Opsiyonel ama önerilir)
+                    // axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                }
+
+                if (backendUser && backendUser.role) {
+                    localStorage.setItem('role', backendUser.role);
+                }
+
+                // Auth state'ini güncellemek için onLoginSuccess'e temiz veri gönderelim
                 const userData = {
-                    username: response.data.username || "Değerli Müşterimiz",
+                    username: backendUser?.username || "Değerli Müşterimiz",
                     email: formData.email,
-                    id: response.data.id || response.data.Id
+                    id: backendUser?.id,
+                    role: backendUser?.role
                 };
+
                 onLoginSuccess(userData);
-                alert("Giriş Başarılı!");
+                
+                // Yönlendirme
+                if (backendUser?.role === "Admin") {
+                    window.location.href = "/admin"; 
+                } else {
+                    alert("Giriş Başarılı!");
+                    onClose();
+                }
+
             } else {
-                alert("Kayıt başarılı!");
+                alert("Kayıt başarılı! Şimdi giriş yapabilirsiniz.");
                 setIsLogin(true);
             }
         } catch (error) {
+            console.error("İşlem Hatası:", error);
             alert("Hata: " + (error.response?.data || "İşlem başarısız"));
         }
     };
@@ -123,10 +147,29 @@ function Auth({ onClose, onLoginSuccess, user, onLogout }) {
             <div className="auth-card">
                 <h2 style={{ color: '#5d4037' }}>{isLogin ? 'Giriş Yap' : 'Hesap Oluştur'}</h2>
                 <form onSubmit={handleSubmit}>
-                    {!isLogin && <input type="text" placeholder="Kullanıcı Adı" required onChange={(e) => setFormData({ ...formData, username: e.target.value })} />}
-                    <input type="email" placeholder="E-posta" required onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
-                    <input type="password" placeholder="Şifre" required onChange={(e) => setFormData({ ...formData, password: e.target.value })} />
-                    <button type="submit" className="auth-button">{isLogin ? 'Giriş Yap' : 'Kayıt Ol'}</button>
+                    {!isLogin && (
+                        <input 
+                            type="text" 
+                            placeholder="Kullanıcı Adı" 
+                            required 
+                            onChange={(e) => setFormData({ ...formData, username: e.target.value })} 
+                        />
+                    )}
+                    <input 
+                        type="email" 
+                        placeholder="E-posta" 
+                        required 
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
+                    />
+                    <input 
+                        type="password" 
+                        placeholder="Şifre" 
+                        required 
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })} 
+                    />
+                    <button type="submit" className="auth-button">
+                        {isLogin ? 'Giriş Yap' : 'Kayıt Ol'}
+                    </button>
                 </form>
                 <p onClick={() => setIsLogin(!isLogin)} style={{ cursor: 'pointer', marginTop: '15px', fontWeight: 'bold' }}>
                     {isLogin ? 'Hesabınız yok mu? Kayıt Olun' : 'Zaten üye misiniz? Giriş Yapın'}

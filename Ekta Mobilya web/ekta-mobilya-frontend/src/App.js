@@ -7,6 +7,9 @@ import Footer from './Footer';
 import { GrFavorite } from "react-icons/gr";
 import { GiHamburgerMenu } from "react-icons/gi";
 import { IoClose } from "react-icons/io5";
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import AdminPanel from './AdminPanel';
+
 
 function App() {
   const [products, setProducts] = useState([]);
@@ -68,8 +71,9 @@ function App() {
   };
 
   return (
+  <Router>
     <div className="App">
-      {/* Navbar Bölümü */}
+      {/* Navbar Bölümü - Sabit Kalıyor */}
       <nav className="navbar">
         <div className="nav-left"><div className="logo-text">EKTA MOBİLYA</div></div>
         <div className="nav-center" onClick={() => {setShowAuth(false); setIsMenuOpen(false);}}>
@@ -93,64 +97,77 @@ function App() {
       {/* Mobil Karartma Overlay */}
       {isMenuOpen && <div className="menu-overlay" onClick={() => setIsMenuOpen(false)}></div>}
 
-      {showAuth ? (
-        <Auth user={user} onClose={() => setShowAuth(false)} onLoginSuccess={setUser} onLogout={handleLogout} />
-      ) : (
-        <>
-          <div className="slider-container">
-            {sliderImages.map((img, index) => (
-              <div key={index} className={`slide ${index === currentSlide ? 'active' : ''}`} style={{ backgroundImage: `url(${img})` }}>
-                <div className="slider-overlay">
-                  <h2 className="slider-text">Şıklığın ve Konforun Buluşma Noktası</h2>
-                  <button className="slider-btn" onClick={() => scrollToSection('product-area')}>Hemen İncele</button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div id="product-area" className="product-grid">
-            {products.map(p => (
-              <div key={p.id} className="product-card" onClick={() => setSelectedProduct(p)}>
-                <img src="https://via.placeholder.com/300x200?text=EKTA+Mobilya" alt={p.name} />
-                <div className="card-footer">
-                  <span>{p.price} TL</span>
-                  <div className={`favorite-icon-wrapper ${p.isFavorite ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); handleFavorite(p.id); }}>
-                    <GrFavorite />
+      <Routes>
+        {/* ANA SAYFA ROTASI */}
+        <Route path="/" element={
+          showAuth ? (
+            <Auth user={user} onClose={() => setShowAuth(false)} onLoginSuccess={setUser} onLogout={handleLogout} />
+          ) : (
+            <>
+              <div className="slider-container">
+                {sliderImages.map((img, index) => (
+                  <div key={index} className={`slide ${index === currentSlide ? 'active' : ''}`} style={{ backgroundImage: `url(${img})` }}>
+                    <div className="slider-overlay">
+                      <h2 className="slider-text">Şıklığın ve Konforun Buluşma Noktası</h2>
+                      <button className="slider-btn" onClick={() => scrollToSection('product-area')}>Hemen İncele</button>
+                    </div>
                   </div>
+                ))}
+              </div>
+
+              <div id="product-area" className="product-grid">
+                {products.map(p => (
+                  <div key={p.id} className="product-card" onClick={() => setSelectedProduct(p)}>
+                    <img src={p.imageUrl || "https://via.placeholder.com/300x200?text=EKTA+Mobilya"} alt={p.name} />
+                    <div className="card-footer">
+                      <span>{p.price} TL</span>
+                      <div className={`favorite-icon-wrapper ${p.isFavorite ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); handleFavorite(p.id); }}>
+                        <GrFavorite />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="three-d-section">
+                <div className="three-d-text">
+                  <h2>3D Tasarımlarımızı Keşfedin</h2>
+                  <p>Ürünlerimizi her açıdan inceleyebilir, detaylara yakından bakabilirsiniz.</p>
+                  <button className="three-d-experience-btn">HEMEN DENEYİMLE</button>
+                </div>
+                <div className="model-wrapper">
+                  <model-viewer
+                    src="/koltuk.glb"
+                    alt="3D Model"
+                    auto-rotate
+                    camera-controls
+                    ar
+                    ar-modes="webxr scene-viewer quick-look"
+                    style={{ width: '100%', height: '500px' }}
+                  >
+                    <button slot="ar-button" className="ar-button">🏠 ODAMDA CANLI GÖR</button>
+                  </model-viewer>
                 </div>
               </div>
-            ))}
-          </div>
+              <Footer />
+            </>
+          )
+        } />
 
-          {/* 3D Bölümü: Görselde Gördüğün Tasarım */}
-          <div className="three-d-section">
-            <div className="three-d-text">
-              <h2>3D Tasarımlarımızı Keşfedin</h2>
-              <p>Ürünlerimizi her açıdan inceleyebilir, detaylara yakından bakabilirsiniz.</p>
-              {/* KAYBOLAN BUTON BURADA */}
-              <button className="three-d-experience-btn">HEMEN DENEYİMLE</button>
-            </div>
-            <div className="model-wrapper">
-              <model-viewer
-                src="/koltuk.glb"
-                alt="3D Model"
-                auto-rotate
-                camera-controls
-                ar
-                ar-modes="webxr scene-viewer quick-look"
-                style={{ width: '100%', height: '500px' }}
-              >
-                <button slot="ar-button" className="ar-button">🏠 ODAMDA CANLI GÖR</button>
-              </model-viewer>
-            </div>
-          </div>
+        {/* ADMİN PANELİ ROTASI */}
+        <Route path="/admin" element={<AdminPanel />} />
+      </Routes>
 
-          <Footer />
-        </>
+      {/* Modal - Her iki sayfanın da dışında ama Router içinde olmalı */}
+      {selectedProduct && (
+        <ProductDetail 
+          product={selectedProduct} 
+          onClose={() => setSelectedProduct(null)} 
+          onFavorite={() => handleFavorite(selectedProduct.id)} 
+        />
       )}
-
-      {selectedProduct && <ProductDetail product={selectedProduct} onClose={() => setSelectedProduct(null)} onFavorite={() => handleFavorite(selectedProduct.id)} />}
     </div>
-  );
+  </Router>
+);
 }
 export default App;
