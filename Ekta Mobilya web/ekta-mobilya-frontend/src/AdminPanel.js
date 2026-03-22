@@ -57,7 +57,7 @@ function AdminPanel() {
         if (!window.confirm("Bu ürünü silmek istediğinize emin misiniz?")) return;
 
         try {
-            await axios.delete(`https://localhost:7087/api/products/${productId}`, {
+            await axios.delete(`https://localhost:7087/api/products/delete/${productId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             setProducts(prev => prev.filter(p => (p.id || p.Id) !== productId));
@@ -78,7 +78,7 @@ function AdminPanel() {
         };
 
         try {
-            await axios.post('https://localhost:7087/api/products', productData, {
+            await axios.post('https://localhost:7087/api/products/add', productData, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -115,7 +115,7 @@ function AdminPanel() {
         };
 
         try {
-            await axios.put(`https://localhost:7087/api/products/${id}`, updatedData, {
+            await axios.put(`https://localhost:7087/api/products/update/${id}`, updatedData, {
                 headers: { 
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
