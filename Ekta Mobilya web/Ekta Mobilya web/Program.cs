@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.StaticFiles;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -93,8 +94,19 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles(); //resimleri görmesi için 
 
-// SIRA ÇOK ÖNEMLİ: CORS her zaman Auth'dan önce gelmeli!
+//GLB ve GLTF dosyalarına izin veriyoruz
+var provider = new FileExtensionContentTypeProvider();
+provider.Mappings[".glb"] = "model/gltf-binary";
+provider.Mappings[".gltf"] = "model/gltf+json";
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = provider
+});
+
+// CORSAuth'dan önce gelmeli!
 app.UseCors("AllowReact");
 
 app.UseAuthentication();
