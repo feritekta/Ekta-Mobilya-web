@@ -204,39 +204,88 @@ body {
   padding: 40px 50px;
 }
 
+/* Ürün Kartı Genel Yapısı */
 .product-card {
-  background-color: #fff;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid #5d4037; 
-  box-shadow: 0 4px 12px rgba(93, 64, 55, 0.15); 
-  transition: all 0.3s ease-in-out;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden; /* Dışarı taşan resmi keser */
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column; /* İçerikleri dikey hizalar */
+  transition: transform 0.3s ease;
+  cursor: pointer;
 }
 
 .product-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 24px rgba(93, 64, 55, 0.25);
-  border: 1px solid #eec15b; 
+  transform: translateY(-5px);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.1);
 }
 
+/* Ürün Resmi - Boyutu sabitleyip yazıyla arasını açıyoruz */
 .product-card img {
   width: 100%;
-  height: 200px;
-  object-fit: cover;
+  height: 220px; /* Sabit yükseklik vererek taşmayı engelleriz */
+  object-fit: cover; /* Resmi bozmadan alanı kaplatır */
+  display: block; /* Altındaki boşluğu temizler */
 }
 
+/* Kartın Alt Bilgi Alanı */
 .card-footer {
+  padding: 12px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 15px;
+  align-items: flex-start; /* İsim uzarsa favori yukarıda kalsın */
+  background: white;
 }
+
+.card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.product-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #333;
+  line-height: 1.2;
+  /* 2 satırdan sonrasını gizle */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Ürün Fiyatı  */
+.product-price {
+  font-weight: 700;
+  color: #d35400;
+  font-size: 1.05rem;
+}
+
 .detail-image{
   width: 100mm;
   height: 50mm;
 }
 
-/* Favori İkonu Dairesi */
+/* Favori İkonu */
+/* Favori İkonu - Orantılı */
+.favorite-icon-wrapper {
+  margin-left: 8px;
+  font-size: 1.2rem;
+  color: #888;
+  padding-bottom: 2px; /* Fiyatla aynı hizada dursun diye */
+}
+
+.favorite-icon-wrapper:hover {
+  transform: scale(1.2);
+}
+
+
+
+/* Favori İkonu Dairesi 
 .favorite-icon-wrapper {
   width: 40px; height: 40px;
   display: flex; align-items: center; justify-content: center;
@@ -248,7 +297,7 @@ body {
 
 .favorite-icon-wrapper.active {
   border-color: #eec15b;
-}
+}*/
 
 .favorite-icon-wrapper.active .favorite-icon path {
   fill: #5d4037 !important;
@@ -262,34 +311,196 @@ body {
 
 
 /* ==========================================
-   5. ÜRÜN DETAY SAYFASI (MODAL)
+   5. ÜRÜN DETAY SAYFASI (MODAL) - TEMİZ YAPI
    ========================================== */
 .modal-overlay {
   position: fixed;
   top: 0; left: 0;
   width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.85);
   display: flex; justify-content: center; align-items: center;
   z-index: 2000;
+  backdrop-filter: blur(8px); /* Arka planı daha şık bulanıklaştırır */
 }
 
 .modal-content {
   background: #fff;
-  padding: 40px;
-  border-radius: 15px;
-  width: 90%;
-  max-width: 1200px;
-  height: 85vh;
+  border-radius: 24px;
+  width: 95%;
+  max-width: 1100px; /* Pencere genişletildi */
+  height: 85vh; /* Yükseklik sabitlendi */
+  padding: 0;
+  overflow: hidden;
   position: relative;
-  overflow-y: auto;
-  animation: modalAnim 0.3s ease-out;
+  display: flex;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.close-btn {
+  position: absolute;
+  top: 20px; right: 25px;
+  font-size: 35px;
+  background: #fff; 
+  border: none;
+  width: 45px; height: 45px;
+  border-radius: 50%;
+  cursor: pointer; color: #333;
+  z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .detail-container {
   display: flex;
-  gap: 40px;
+  width: 100%;
+  height: 100%; /* İçeriğin modalı tam doldurmasını sağlar */
 }
 
+/* --- SOL TARAF: FOTOĞRAF ALANI (Genişletildi) --- */
+.detail-visual-section {
+  flex: 1.4; /* Fotoğraf alanı daha baskın */
+  background: #fdfdfd;
+  height: 100%;
+}
+
+.detail-image-wrapper {
+  width: 100%;
+  height: 100%;
+}
+
+.detail-image-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Fotoğrafın kutuyu tamamen doldurmasını sağlar, boşluk bırakmaz */
+  display: block;
+}
+
+/* --- SAĞ TARAF: BİLGİLER VE AKSİYONLAR --- */
+.detail-info-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 50px 40px; /* Daha havadar bir padding */
+  overflow-y: auto;
+  background: #fff;
+}
+
+.detail-title {
+  color: #2c1b18;
+  font-size: 2.4rem;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+  line-height: 1.1;
+}
+
+.detail-price {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #e67e22;
+  margin-bottom: 30px;
+}
+
+.detail-divider {
+  border: 0; 
+  border-top: 1px solid #f0f0f0;
+  margin-bottom: 30px;
+}
+
+.detail-description h3 {
+  color: #8d6e63; 
+  font-size: 0.9rem; 
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+
+.detail-description p {
+  color: #555; 
+  line-height: 1.7;
+  font-size: 1.05rem;
+}
+
+/* 3D Model Önizleme Kutusu */
+.detail-actions-3d {
+  margin-top: auto; /* Yazılar azsa butonları en alta iter */
+  padding-top: 40px;
+}
+
+.model-preview-box {
+  width: 100%;
+  height: 220px;
+  background: #f8f9fa;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  position: relative;
+  border: 1px solid #eee;
+  overflow: hidden;
+}
+
+.mini-model-viewer {
+  width: 100%; height: 100%;
+}
+
+/* Aksiyon Butonları */
+.action-buttons-row {
+  display: flex; 
+  gap: 15px; 
+  align-items: center;
+}
+
+.view-3d-btn {
+  flex: 1;
+  padding: 18px;
+  background: #5d4037;
+  color: white; 
+  border: none;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 1rem;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  cursor: pointer; 
+  transition: all 0.3s ease;
+}
+
+.view-3d-btn:hover { 
+  background: #3e2723; 
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(93, 64, 55, 0.2);
+}
+
+.fav-btn-circle {
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  background: #f4f1ee;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; 
+  transition: all 0.3s ease; 
+  color: #5d4037;
+}
+
+.fav-btn-circle:hover { background: #efebe9; }
+
+.fav-btn-circle.active {
+  background: #5d4037; color: white;
+}
+
+/* --- MOBİL UYUMLULUK --- */
+@media (max-width: 950px) {
+  .modal-content {
+    flex-direction: column;
+    height: 95vh;
+  }
+  .detail-container {
+    flex-direction: column;
+  }
+  .detail-visual-section {
+    flex: none;
+    height: 350px; /* Mobilde resim yüksekliği */
+  }
+  .detail-info-section {
+    padding: 30px 20px;
+  }
+}
 
 /* ==========================================
    6. AUTH (GİRİŞ/KAYIT) KARTLARI

@@ -1,193 +1,165 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './Admin.css';
-import { GrProductHunt, GrUserAdmin } from "react-icons/gr";
+import { GrProductHunt, } from "react-icons/gr";
 import { MdDashboard, MdDelete, MdEdit } from "react-icons/md";
 
 function AdminPanel() {
-    // --- STATE TANIMLAMALARI ---
+    // --- STATE'LER ---
     const [activeTab, setActiveTab] = useState('dashboard');
     const [products, setProducts] = useState([]);
     const [showAddModal, setShowAddModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
 
+    // Dosya state'leri (Kullanıcının bilgisayarından seçtiği ham dosyalar)
+    const [imageFile, setImageFile] = useState(null);
+    const [modelFile, setModelFile] = useState(null);
+
     const [newProduct, setNewProduct] = useState({
-        Name: '',
-        Price: '',
-        Description: '',
-        ImageUrl: '',
-        Category: 'Genel',
-        ModelUrl: '/koltuk.glb'
+        Name: '', Price: '', Description: '', Category: 'Genel'
     });
 
-    // --- YETKİ KONTROLÜ ---
+    // --- YETKİ VE VERİ ÇEKME ---
     useEffect(() => {
         const token = localStorage.getItem('token');
         const role = localStorage.getItem('role');
-
         if (!token || role !== 'Admin') {
-            alert("Bu sayfaya erişmek için Admin yetkiniz olmalı!");
+            alert("Admin girişi gerekli!");
             window.location.href = "/login";
         }
+        fetchProducts();
     }, []);
 
-    // --- VERİ ÇEKME İŞLEMİ ---
     const fetchProducts = async () => {
         try {
             const res = await axios.get('https://localhost:7087/api/products');
             setProducts(res.data);
+        } catch (err) { console.error("Hata:", err); }
+    };
+
+    // --- DOSYA YÜKLEME FONKSİYONU (API'ye Dosya Atar) ---
+    const uploadToApi = async (file) => {
+        if (!file) return null;
+        const formData = new FormData();
+        formData.append('file', file); // Backend'deki "IFormFile file" ile aynı isim
+
+        try {
+            const res = await axios.post('https://localhost:7087/api/products/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            return res.data.url; // Dönen değer: /uploads/abc.jpg
         } catch (err) {
-            console.error("Ürünler yüklenirken hata:", err);
+            console.error("Dosya yükleme hatası:", err);
+            return null;
         }
     };
 
-    useEffect(() => {
-        fetchProducts();
-    }, []);
-
-    // --- ÜRÜN SİLME FONKSİYONU ---
-    const handleDelete = async (productId) => {
-        if (!productId) {
-            alert("Ürün ID'si bulunamadı!");
-            return;
-        }
-
+    // --- ÜRÜN EKLEME (Önce Dosya, Sonra Veri) ---
+    const handleAddProduct = async (e) => {
+        e.preventDefault();
         const token = localStorage.getItem('token');
-        if (!window.confirm("Bu ürünü silmek istediğinize emin misiniz?")) return;
 
+        // 1. Dosyaları arka planda yükle
+        const uploadedImg = await uploadToApi(imageFile);
+        const uploadedModel = await uploadToApi(modelFile);
+
+        const productData = {
+            ...newProduct,
+            Price: Number(newProduct.Price),
+            ImageUrl: uploadedImg || '', // Sunucudan gelen yol
+            ModelUrl: uploadedModel || '/koltuk.glb'
+        };
+
+        try {
+            await axios.post('https://localhost:7087/api/products/add', productData, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            alert("Başarıyla eklendi!");
+            setShowAddModal(false);
+            fetchProducts();
+        } catch (err) { alert("Ekleme başarısız."); }
+    };
+
+    // --- SİLME ---
+    const handleDelete = async (productId) => {
+        if (!window.confirm("Silinsin mi?")) return;
+        const token = localStorage.getItem('token');
         try {
             await axios.delete(`https://localhost:7087/api/products/delete/${productId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             setProducts(prev => prev.filter(p => (p.id || p.Id) !== productId));
-            alert("Ürün başarıyla silindi.");
-        } catch (err) {
-            console.error("Silme hatası:", err.response);
-            alert("Silme işlemi başarısız.");
-        }
+        } catch (err) { alert("Silinemedi."); }
     };
 
-    // --- YENİ ÜRÜN EKLEME FONKSİYONU ---
-    const handleAddProduct = async (e) => {
-        e.preventDefault();
-        const token = localStorage.getItem('token');
-        const productData = {
-            ...newProduct,
-            Price: Number(newProduct.Price) || 0
-        };
-
-        try {
-            await axios.post('https://localhost:7087/api/products/add', productData, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            alert("Ürün başarıyla eklendi!");
-            setShowAddModal(false);
-            setNewProduct({ Name: '', Price: '', Description: '', ImageUrl: '', Category: 'Genel', ModelUrl: '/koltuk.glb' });
-            fetchProducts();
-        } catch (err) {
-            alert("Ekleme hatası: " + JSON.stringify(err.response?.data));
-        }
-    };
-
-    // --- GÜNCELLEME FONKSİYONLARI ---
-    const handleEditClick = (product) => {
-        setEditingProduct({ ...product });
-        setShowEditModal(true);
-    };
-
+    // --- DÜZENLEME (Edit) ---
     const handleUpdateProduct = async (e) => {
         e.preventDefault();
         const token = localStorage.getItem('token');
-        const id = editingProduct.id || editingProduct.Id;
 
-        // Backend'in beklediği formatta veriyi hazırlıyoruz
+        // Yeni dosya seçildiyse yükle, seçilmediyse eskisini kullan
+        const newImg = await uploadToApi(imageFile);
+
         const updatedData = {
             Name: editingProduct.name || editingProduct.Name,
             Price: Number(editingProduct.price || editingProduct.Price),
-            Category: editingProduct.category || editingProduct.Category,
             Description: editingProduct.description || editingProduct.Description,
-            ImageUrl: editingProduct.imageUrl || editingProduct.ImageUrl,
+            Category: editingProduct.category || editingProduct.Category,
+            ImageUrl: newImg || editingProduct.imageUrl || editingProduct.ImageUrl,
             ModelUrl: editingProduct.modelUrl || editingProduct.ModelUrl
         };
 
         try {
-            await axios.put(`https://localhost:7087/api/products/update/${id}`, updatedData, {
-                headers: { 
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
+            await axios.put(`https://localhost:7087/api/products/update/${editingProduct.id || editingProduct.Id}`, updatedData, {
+                headers: { 'Authorization': `Bearer ${token}` }
             });
-            alert("Ürün güncellendi!");
             setShowEditModal(false);
             fetchProducts();
-        } catch (err) {
-            console.error("Güncelleme hatası:", err);
-            alert("Güncelleme başarısız.");
-        }
+        } catch (err) { alert("Güncellenemedi."); }
     };
 
     return (
         <div className="admin-layout">
+            {/* SOL MENÜ */}
             <aside className="admin-sidebar">
                 <div className="admin-logo">EKTA PANEL</div>
                 <ul>
-                    <li className={activeTab === 'dashboard' ? 'active' : ''} onClick={() => setActiveTab('dashboard')}>
-                        <MdDashboard /> Dashboard
-                    </li>
-                    <li className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}>
-                        <GrProductHunt /> Ürün Yönetimi
-                    </li>
-                    <li className={activeTab === 'users' ? 'active' : ''} onClick={() => setActiveTab('users')}>
-                        <GrUserAdmin /> Kullanıcılar
-                    </li>
+                    <li className={activeTab === 'dashboard' ? 'active' : ''} onClick={() => setActiveTab('dashboard')}><MdDashboard /> Dashboard</li>
+                    <li className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}><GrProductHunt /> Ürün Yönetimi</li>
                 </ul>
                 <button className="back-to-site" onClick={() => window.location.href = "/"}>Vitrine Dön</button>
             </aside>
 
+            {/* ANA İÇERİK */}
             <main className="admin-main">
-                {activeTab === 'dashboard' && (
-                    <div className="dashboard-view">
-                        <h2>Genel Özet</h2>
-                        <div className="stats-grid">
-                            <div className="stat-card">
-                                <h3>{products.length}</h3>
-                                <p>Toplam Ürün</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 {activeTab === 'products' && (
                     <div className="products-view">
                         <div className="view-header">
                             <h2>Ürün Yönetimi</h2>
-                            <button className="add-new-btn" onClick={() => setShowAddModal(true)}>+ Yeni Ürün Ekle</button>
+                            <button className="add-new-btn" onClick={() => setShowAddModal(true)}>+ Yeni Ürün</button>
                         </div>
                         <table className="admin-table">
                             <thead>
-                                <tr>
-                                    <th>Görsel</th>
-                                    <th>Ürün Adı</th>
-                                    <th>Fiyat</th>
-                                    <th>Kategori</th>
-                                    <th>İşlemler</th>
-                                </tr>
+                                <tr><th>Görsel</th><th>Ad</th><th>Fiyat</th><th>İşlem</th></tr>
                             </thead>
                             <tbody>
-                                {products.map((p, index) => (
-                                    <tr key={p.id || p.Id || index}>
+                                {products.map(p => (
+                                    <tr key={p.id || p.Id}>
                                         <td>
-                                            <img src={p.imageUrl || p.ImageUrl || "https://via.placeholder.com/50"} alt="" className="table-img" />
+                                            <img
+                                                src={p.imageUrl?.startsWith('/')
+                                                    ? `https://localhost:7087${p.imageUrl}`
+                                                    : p.imageUrl}
+                                                alt="Ürün"
+                                                className="table-img"
+                                                onError={(e) => { e.target.src = 'https://via.placeholder.com/50'; }} // Resim bulunamazsa hata vermesin
+                                            />
                                         </td>
                                         <td>{p.name || p.Name}</td>
                                         <td>{p.price || p.Price} TL</td>
-                                        <td>{p.category || p.Category}</td>
-                                        <td className="actions">
-                                            <button className="edit-btn" onClick={() => handleEditClick(p)}><MdEdit /></button>
+                                        <td>
+                                            <button className="edit-btn" onClick={() => { setEditingProduct(p); setShowEditModal(true); }}><MdEdit /></button>
                                             <button className="delete-btn" onClick={() => handleDelete(p.id || p.Id)}><MdDelete /></button>
                                         </td>
                                     </tr>
@@ -197,20 +169,25 @@ function AdminPanel() {
                     </div>
                 )}
 
-                {/* --- EKLEME MODALI --- */}
+                {/* EKLEME MODALI */}
                 {showAddModal && (
                     <div className="admin-modal-overlay">
                         <div className="admin-modal">
                             <h2>Yeni Ürün Ekle</h2>
                             <form className="admin-form" onSubmit={handleAddProduct}>
-                                <input type="text" placeholder="Ürün Adı" value={newProduct.Name} required onChange={(e) => setNewProduct({ ...newProduct, Name: e.target.value })} />
-                                <input type="number" placeholder="Fiyat" value={newProduct.Price} required onChange={(e) => setNewProduct({ ...newProduct, Price: e.target.value })} />
-                                <input type="text" placeholder="Kategori" value={newProduct.Category} required onChange={(e) => setNewProduct({ ...newProduct, Category: e.target.value })} />
-                                <textarea placeholder="Açıklama" value={newProduct.Description} onChange={(e) => setNewProduct({ ...newProduct, Description: e.target.value })} />
-                                <input type="text" placeholder="Görsel URL (/images/koltuk.jpg)" value={newProduct.ImageUrl} onChange={(e) => setNewProduct({ ...newProduct, ImageUrl: e.target.value })} />
-                                <input type="text" placeholder="3D Model URL (/models/koltuk.glb)" value={newProduct.ModelUrl} onChange={(e) => setNewProduct({ ...newProduct, ModelUrl: e.target.value })} />
+                                <input type="text" placeholder="Ürün Adı" required onChange={e => setNewProduct({ ...newProduct, Name: e.target.value })} />
+                                <input type="number" placeholder="Fiyat" required onChange={e => setNewProduct({ ...newProduct, Price: e.target.value })} />
+                                <input type="text" placeholder="Kategori" onChange={e => setNewProduct({ ...newProduct, Category: e.target.value })} />
+                                <textarea placeholder="Açıklama" onChange={e => setNewProduct({ ...newProduct, Description: e.target.value })} />
+
+                                <label>Ürün Resmi:</label>
+                                <input type="file" accept="image/*" onChange={e => setImageFile(e.target.files[0])} />
+
+                                <label>3D Model (.glb):</label>
+                                <input type="file" accept=".glb" onChange={e => setModelFile(e.target.files[0])} />
+
                                 <div className="modal-buttons">
-                                    <button type="submit" className="save-btn">Ürünü Kaydet</button>
+                                    <button type="submit" className="save-btn">Kaydet</button>
                                     <button type="button" className="cancel-btn" onClick={() => setShowAddModal(false)}>İptal</button>
                                 </div>
                             </form>
@@ -218,39 +195,15 @@ function AdminPanel() {
                     </div>
                 )}
 
-                {/* --- DÜZENLEME MODALI --- */}
+                {/* DÜZENLEME MODALI (Gerektiğinde Form İçeriği Ekleme Modalına Benzer Yapılır) */}
                 {showEditModal && editingProduct && (
                     <div className="admin-modal-overlay">
                         <div className="admin-modal">
                             <h2>Ürünü Düzenle</h2>
                             <form className="admin-form" onSubmit={handleUpdateProduct}>
-                                <input 
-                                    type="text" 
-                                    value={editingProduct.name || editingProduct.Name} 
-                                    onChange={(e) => setEditingProduct({ ...editingProduct, Name: e.target.value, name: e.target.value })} 
-                                />
-                                <input 
-                                    type="number" 
-                                    value={editingProduct.price || editingProduct.Price} 
-                                    onChange={(e) => setEditingProduct({ ...editingProduct, Price: e.target.value, price: e.target.value })} 
-                                />
-                                <input 
-                                    type="text" 
-                                    placeholder="Görsel URL"
-                                    value={editingProduct.imageUrl || editingProduct.ImageUrl} 
-                                    onChange={(e) => setEditingProduct({ ...editingProduct, ImageUrl: e.target.value, imageUrl: e.target.value })} 
-                                />
-                                <input 
-                                    type="text" 
-                                    placeholder="3D Model URL"
-                                    value={editingProduct.modelUrl || editingProduct.ModelUrl} 
-                                    onChange={(e) => setEditingProduct({ ...editingProduct, ModelUrl: e.target.value, modelUrl: e.target.value })} 
-                                />
-                                <textarea 
-                                    placeholder="Açıklama"
-                                    value={editingProduct.description || editingProduct.Description} 
-                                    onChange={(e) => setEditingProduct({ ...editingProduct, Description: e.target.value, description: e.target.value })} 
-                                />
+                                <input type="text" value={editingProduct.name || editingProduct.Name} onChange={e => setEditingProduct({ ...editingProduct, name: e.target.value })} />
+                                <input type="number" value={editingProduct.price || editingProduct.Price} onChange={e => setEditingProduct({ ...editingProduct, price: e.target.value })} />
+                                <input type="file" onChange={e => setImageFile(e.target.files[0])} />
                                 <div className="modal-buttons">
                                     <button type="submit" className="save-btn">Güncelle</button>
                                     <button type="button" className="cancel-btn" onClick={() => setShowEditModal(false)}>İptal</button>

@@ -4,9 +4,21 @@ using Microsoft.EntityFrameworkCore;
 using Ekta_Mobilya_web.Data;
 using Ekta_Mobilya_web.Models;
 using Microsoft.AspNetCore.Authorization;
+using System.IO;
 
 namespace Ekta_Mobilya_web.Controllers
 {
+    // React'tan gelecek "Dosya + Metin" paketini karşılayan yardımcı sınıf
+    public class ProductDto
+    {
+        public string Name { get; set; }
+        public decimal Price { get; set; }
+        public string? Description { get; set; }
+        public string? Category { get; set; }
+        public IFormFile? ImageFile { get; set; } // Fotoğraf için
+        public IFormFile? ModelFile { get; set; } // .glb için
+    }
+
     [Route("api/[controller]")]
     [ApiController]
     public class ProductsController : ControllerBase
@@ -18,7 +30,7 @@ namespace Ekta_Mobilya_web.Controllers
             _context = context;
         }
 
-        // --- 1. ÜRÜN LİSTELEME (Gelişmiş) ---
+        // --- 1. ÜRÜN LİSTELEME ---
         [HttpGet]
         public async Task<IActionResult> GetProducts([FromQuery] int? userId)
         {
@@ -31,40 +43,61 @@ namespace Ekta_Mobilya_web.Controllers
                 p.Description,
                 p.ImageUrl,
                 p.Category,
-                p.ModelUrl, // Eksik olan GLB alanı eklendi
+                p.ModelUrl,
                 IsFavorite = userId.HasValue && _context.Favorites.Any(f => f.UserId == userId && f.ProductId == p.Id)
             }).ToList();
 
             return Ok(productList);
         }
 
-        // --- 2. ÜRÜN EKLEME (Admin) ---
+        // --- 2. ÜRÜN EKLEME (Admin - Dosya Destekli) ---
         [Authorize(Roles = "Admin")]
         [HttpPost("add")]
-        public async Task<IActionResult> AddProduct([FromBody] Product product)
+        public async Task<IActionResult> AddProduct([FromForm] ProductDto dto)
         {
-            if (product == null) return BadRequest("Ürün verisi boş olamaz.");
+            if (dto == null) return BadRequest("Ürün verisi boş olamaz.");
+
+            var product = new Product
+            {
+                Name = dto.Name,
+                Price = dto.Price,
+                Description = dto.Description,
+                Category = dto.Category
+            };
+
+            // Resim varsa kaydet
+            if (dto.ImageFile != null)
+                product.ImageUrl = await SaveFile(dto.ImageFile);
+
+            // GLB Model varsa kaydet
+            if (dto.ModelFile != null)
+                product.ModelUrl = await SaveFile(dto.ModelFile);
 
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
             return Ok(product);
         }
 
-        // --- 3. ÜRÜN GÜNCELLEME (Admin) ---
+        // --- 3. ÜRÜN GÜNCELLEME (Admin - Dosya Destekli) ---
         [Authorize(Roles = "Admin")]
         [HttpPut("update/{id}")]
-        public async Task<IActionResult> UpdateProduct(int id, [FromBody] Product updatedProduct)
+        public async Task<IActionResult> UpdateProduct(int id, [FromForm] ProductDto dto)
         {
             var product = await _context.Products.FindAsync(id);
             if (product == null) return NotFound("Ürün bulunamadı.");
 
-            // Tüm alanları tek tek güncelliyoruz
-            product.Name = updatedProduct.Name;
-            product.Price = updatedProduct.Price;
-            product.Description = updatedProduct.Description;
-            product.ImageUrl = updatedProduct.ImageUrl;
-            product.Category = updatedProduct.Category;
-            product.ModelUrl = updatedProduct.ModelUrl; // GLB model yolu güncellemesi eklendi
+            product.Name = dto.Name;
+            product.Price = dto.Price;
+            product.Description = dto.Description;
+            product.Category = dto.Category;
+
+            // Eğer yeni bir resim seçildiyse güncelle
+            if (dto.ImageFile != null)
+                product.ImageUrl = await SaveFile(dto.ImageFile);
+
+            // Eğer yeni bir model seçildiyse güncelle
+            if (dto.ModelFile != null)
+                product.ModelUrl = await SaveFile(dto.ModelFile);
 
             await _context.SaveChangesAsync();
             return Ok(product);
@@ -84,7 +117,6 @@ namespace Ekta_Mobilya_web.Controllers
         }
 
         // --- FAVORİ İŞLEMLERİ ---
-
         [HttpPost("favorite")]
         public async Task<IActionResult> AddFavorite([FromBody] Favorite favorite)
         {
@@ -123,18 +155,22 @@ namespace Ekta_Mobilya_web.Controllers
             return Ok(new { message = "Favorilerden kaldırıldı!" });
         }
 
-        // Örnek Veri Seed (İhtiyaç duyarsan kullan)
-        [HttpPost("seed")]
-        public async Task<IActionResult> SeedData()
+        // --- YARDIMCI DOSYA KAYDETME FONKSİYONU ---
+        private async Task<string> SaveFile(IFormFile file)
         {
-            if (_context.Products.Any()) return BadRequest("Veriler zaten eklenmiş.");
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+            if (!Directory.Exists(uploadsFolder))
+                Directory.CreateDirectory(uploadsFolder);
 
-            _context.Products.AddRange(
-                new Product { Name = "Modern Koltuk", Description = "Şık tasarım.", Price = 15000, ImageUrl = "/images/koltuk.jpg", Category = "Oturma Odası", ModelUrl = "/models/koltuk.glb" }
-            );
+            var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
-            await _context.SaveChangesAsync();
-            return Ok("Örnek veriler eklendi.");
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            return $"/uploads/{uniqueFileName}";
         }
     }
 }
