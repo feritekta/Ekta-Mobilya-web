@@ -7,6 +7,17 @@ using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.StaticFiles;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 100 * 1024 * 1024; // 100 MB limit
+});
+
+// Ayrıca controller bazlı limit için bunu da altına ekle:
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(x =>
+{
+    x.ValueLengthLimit = int.MaxValue;
+    x.MultipartBodyLengthLimit = 100 * 1024 * 1024; // 100 MB
+});
 
 // --- 1. AYARLAR ---
 var jwtKey = "super_secret_key_1234567890123456";
@@ -94,24 +105,31 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles(); //resimleri görmesi için 
+// 1. Önce CORS politikası uygulanmalı
+app.UseCors("AllowReact");
 
-//GLB ve GLTF dosyalarına izin veriyoruz
+// 2. Statik dosyalar için MIME tiplerini ve CORS header'larını ayarla
 var provider = new FileExtensionContentTypeProvider();
 provider.Mappings[".glb"] = "model/gltf-binary";
 provider.Mappings[".gltf"] = "model/gltf+json";
 
+// Tüm statik dosyalar (resimler + modeller) için tek bir ayar:
 app.UseStaticFiles(new StaticFileOptions
 {
-    ContentTypeProvider = provider
+    ContentTypeProvider = provider,
+    OnPrepareResponse = ctx =>
+    {
+        // Bu satır React tarafındaki "CORS policy blocked" hatasını çözer
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, OPTIONS");
+        ctx.Context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type");
+    }
 });
 
-// CORSAuth'dan önce gelmeli!
-app.UseCors("AllowReact");
+// Artık ikinci bir app.UseStaticFiles() çağırmana gerek yok, yukarıdaki her şeyi kapsıyor.
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
 app.Run();
